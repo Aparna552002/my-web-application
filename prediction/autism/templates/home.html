@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autism Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white shadow-lg rounded-lg p-8 w-full max-w-lg text-center">
+        <h2 class="text-2xl font-bold text-gray-700">Autism Prediction Test</h2>
+        
+        <!-- Step 1: Personal Information Form -->
+        <div id="step1">
+            <div class="text-left mt-4">
+                <label class="font-semibold">Name:</label>
+                <input type="text" id="name" class="w-full border p-2 rounded mt-1">
+            </div>
+            <div class="text-left mt-4">
+                <label class="font-semibold">Age:</label>
+                <input type="number" id="age" min="1" class="w-full border p-2 rounded mt-1">
+            </div>
+            <div class="text-left mt-4">
+                <label class="font-semibold">Gender:</label>
+                <select id="gender" class="w-full border p-2 rounded mt-1">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            <div class="text-left mt-4">
+                <label class="font-semibold">Ethnicity:</label>
+                <input type="text" id="ethnicity" class="w-full border p-2 rounded mt-1">
+            </div>
+            <button class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded mt-6 transition duration-300" onclick="nextStep()">Next</button>
+        </div>
+
+        <!-- Step 2: Autism Score Questions -->
+        <div id="step2" class="hidden">
+            <div id="question-container" class="text-left"></div>
+            <button class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded mt-6 transition duration-300" onclick="predictAutism()">Predict</button>
+            <p id="error-message" class="text-red-500 font-bold mt-4"></p>
+            <p id="prediction-result" class="text-blue-600 font-bold mt-4"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", generateQuestions);
+
+        function generateQuestions() {
+            const questions = [
+                "Social Awareness", "Communication Skills", "Imaginative Play", "Routine Preference", "Attention to Detail", "Peer Interaction",
+                "Facial Expression Recognition", "Response to Name", "Unusual Repetitive Behavior", "Sensory Sensitivity"
+            ];
+            const container = document.getElementById("question-container");
+
+            questions.forEach((question, index) => {
+                container.innerHTML += `
+                    <div class='mt-4'>
+                        <label class='font-semibold'>${question}:</label>
+                        <input type='number' id='a${index + 1}' min='0' max='1' class='w-full border p-2 rounded mt-1'>
+                    </div>
+                `;
+            });
+        }
+
+        function nextStep() {
+            const name = document.getElementById("name").value.trim();
+            const age = document.getElementById("age").value.trim();
+            if (!name || !age || age <= 0) {
+                alert("Please enter valid Name and Age.");
+                return;
+            }
+            document.getElementById("step1").classList.add("hidden");
+            document.getElementById("step2").classList.remove("hidden");
+        }
+
+        function predictAutism() {
+            let isValid = true;
+            const scores = {};
+            for (let i = 1; i <= 10; i++) {
+                const value = document.getElementById(`a${i}`).value.trim();
+                if (!value || isNaN(value) || value < 0 || value > 1) {
+                    isValid = false;
+                    break;
+                }
+                scores[`a${i}`] = parseInt(value, 10);
+            }
+
+            if (!isValid) {
+                document.getElementById("error-message").innerText = "Please enter valid values (0 or 1) for all questions.";
+                return;
+            }
+
+            const requestData = {
+                name: document.getElementById("name").value.trim(),
+                age: parseInt(document.getElementById("age").value.trim(), 10),
+                gender: document.getElementById("gender").value,
+                ethnicity: document.getElementById("ethnicity").value.trim(),
+                ...scores
+            };
+
+            fetch("/predict/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("error-message").innerText = "";
+                if (data.error) {
+                    document.getElementById("prediction-result").innerHTML = `<span class='text-red-500'>${data.error}</span>`;
+                } else {
+                    document.getElementById("prediction-result").innerHTML = `<span class='text-green-500'>Prediction: ${data.prediction}</span>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById("prediction-result").innerHTML = `<span class='text-red-500'>Error: Server connection failed.</span>`;
+            });
+        }
+    </script>
+</body>
+</html>
